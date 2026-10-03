@@ -36,7 +36,7 @@ These observations do **not** establish the proposed architecture. In particular
 - Fişek et al. (2023), *Cortico-cortical feedback engages active dendrites in visual cortex*, Nature. https://doi.org/10.1038/s41586-023-06007-6
 - Dehghani et al. (2018), *Universal Transformers*. https://arxiv.org/abs/1807.03819
 - Gu & Dao (2023), *Mamba: Linear-Time Sequence Modeling with Selective State Spaces*. https://arxiv.org/abs/2312.00752
-- Aru et al. (2015/2017 commentary lineage), PAC caveats; see *Discriminating Valid from Spurious Indices of Phase-Amplitude Coupling*. https://doi.org/10.1523/ENEURO.0334-16.2016
+- Jensen, Spaak & Park (2016/2017), *Discriminating Valid from Spurious Indices of Phase-Amplitude Coupling*, eNeuro. https://doi.org/10.1523/ENEURO.0334-16.2016
 
 ## 3. Computational abstraction
 
