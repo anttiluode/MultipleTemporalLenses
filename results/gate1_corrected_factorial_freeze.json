@@ -1,0 +1,29 @@
+{
+  "frozen_before_corrected_heldout_run": true,
+  "development_receipt_config_hash": "ee87bd0f4c1096e9c8ca2a3ccbd34758b4a3e784cce242f13cd276dab48289a8",
+  "models": [
+    "single_state",
+    "raw_gated",
+    "residual_gated",
+    "raw_concat",
+    "residual_concat"
+  ],
+  "training": {
+    "lr": 0.003,
+    "batch_size": 128,
+    "max_steps": 1000,
+    "patience": 100,
+    "train_seed": 101,
+    "validation_seed": 202
+  },
+  "development_mean_accuracy": {
+    "single_state": 0.454296875,
+    "raw_gated": 0.503515625,
+    "residual_gated": 0.396484375,
+    "raw_concat": 0.60625,
+    "residual_concat": 0.659375
+  },
+  "decision_rule": "A comparison is clear only when mean accuracy is greater and the first model wins at least 4 of 5 evaluation seeds.",
+  "settings_changed_after_development": false,
+  "methodology_note": "An abandoned pre-correction local run had previously touched seeds 3001-3005 using the superseded model/coordinate design. The corrected models were not tuned from those results; the corrected run keeps the preregistered seeds as a canonical held-out replication rather than claiming the seed identities were never executed anywhere."
+}
