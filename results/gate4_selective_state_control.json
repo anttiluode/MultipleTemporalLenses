@@ -1,0 +1,137 @@
+{
+  "config": {
+    "benchmark": {
+      "anchor_lags": [
+        2,
+        16,
+        64
+      ],
+      "eval_seeds": [
+        3001,
+        3002,
+        3003,
+        3004,
+        3005
+      ],
+      "num_scales": 3,
+      "sequence_length": 72,
+      "state_dim": 12,
+      "vocab_size": 8
+    },
+    "claim_boundary": "Minimal input-selective diagonal recurrence; Mamba-like control, not an implementation of Mamba.",
+    "control_name": "SelectiveStateBaseline",
+    "development_eval_seeds": [
+      2101,
+      2102,
+      2103,
+      2104,
+      2105
+    ],
+    "execution_note": "Planned interpretation control run after Gate 1 with no hyperparameter changes or tuning against held-out results.",
+    "state_budget": 36,
+    "train_seed": 101,
+    "training": {
+      "batch_size": 128,
+      "lr": 0.003,
+      "max_steps": 1000,
+      "patience": 100
+    },
+    "validation_seed": 202
+  },
+  "config_hash": "93b83b1181dcaf7adfab0a362ae7fe1c80a75c253f64dfdf2a582ee199974593",
+  "experiment": "gate4_selective_state_control",
+  "kind": "frozen",
+  "metrics": {
+    "comparison_to_gate1_raw_concat": {
+      "mean_delta_selective_minus_raw_concat": -0.10468749999999999,
+      "raw_concat_frozen_mean_accuracy": 0.52578125,
+      "selective_state_frozen_mean_accuracy": 0.42109375,
+      "selective_state_seed_wins": 0,
+      "status": "SELECTIVE_STATE_BELOW_RAW_CONCAT"
+    },
+    "development": {
+      "mean_accuracy": 0.396875,
+      "mean_loss": 1.4583389282226562,
+      "per_seed": [
+        {
+          "accuracy": 0.3984375,
+          "loss": 1.47907555103302,
+          "seed": 2101
+        },
+        {
+          "accuracy": 0.40234375,
+          "loss": 1.4254380464553833,
+          "seed": 2102
+        },
+        {
+          "accuracy": 0.392578125,
+          "loss": 1.4955726861953735,
+          "seed": 2103
+        },
+        {
+          "accuracy": 0.390625,
+          "loss": 1.4490760564804077,
+          "seed": 2104
+        },
+        {
+          "accuracy": 0.400390625,
+          "loss": 1.4425323009490967,
+          "seed": 2105
+        }
+      ]
+    },
+    "frozen": {
+      "mean_accuracy": 0.42109375,
+      "mean_loss": 1.4763314962387084,
+      "per_seed": [
+        {
+          "accuracy": 0.4140625,
+          "loss": 1.482407569885254,
+          "seed": 3001
+        },
+        {
+          "accuracy": 0.384765625,
+          "loss": 1.520721673965454,
+          "seed": 3002
+        },
+        {
+          "accuracy": 0.435546875,
+          "loss": 1.4641677141189575,
+          "seed": 3003
+        },
+        {
+          "accuracy": 0.44140625,
+          "loss": 1.465773105621338,
+          "seed": 3004
+        },
+        {
+          "accuracy": 0.4296875,
+          "loss": 1.448587417602539,
+          "seed": 3005
+        }
+      ]
+    },
+    "training": {
+      "best_step": 978,
+      "best_validation_loss": 1.4128488302230835,
+      "stopped_early": false
+    }
+  },
+  "model_metadata": {
+    "class": "SelectiveStateBaseline",
+    "explicit_history_scalar_proxy": null,
+    "parameter_count": 1088,
+    "resident_state_scalars": 36
+  },
+  "python_version": "3.13.5",
+  "seeds": [
+    3001,
+    3002,
+    3003,
+    3004,
+    3005
+  ],
+  "seeds_hash": "0af7b5146d33ed27481501a201095bd30cb89e508d490fc106c50adaab950ac4",
+  "timestamp_utc": "2026-10-03T16:52:13.440253+00:00",
+  "torch_version": "2.10.0+cpu"
+}
