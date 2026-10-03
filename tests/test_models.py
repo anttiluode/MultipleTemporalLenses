@@ -1,5 +1,6 @@
 import torch
 
+from multiple_temporal_lenses.baselines import SelectiveStateBaseline, TinyCausalTransformer
 from multiple_temporal_lenses.models import (
     QueryConcatLensControl,
     QueryGatedLensModel,
@@ -118,3 +119,51 @@ def test_concat_reader_is_parameter_matched_to_gated_reader_within_five_percent(
     concat_count = _parameter_count(concat)
 
     assert abs(gated_count - concat_count) / gated_count <= 0.05
+
+
+def test_selective_state_and_transformer_output_shapes_and_memory_contracts():
+    sequence, query = _example(batch=3, time=10)
+    selective = SelectiveStateBaseline(state_dim=36)
+    transformer = TinyCausalTransformer(d_model=12, nhead=3, num_layers=1, ff_dim=24)
+
+    selective_out = selective(sequence, query)
+    transformer_out = transformer(sequence, query)
+
+    assert selective_out.logits.shape == (3, 8)
+    assert transformer_out.logits.shape == (3, 8)
+    assert selective.resident_state_scalars == 36
+    assert not hasattr(transformer, "resident_state_scalars")
+
+
+def test_selective_state_retention_is_input_dependent():
+    model = SelectiveStateBaseline(state_dim=36)
+    with torch.no_grad():
+        model.retention_proj.weight.zero_()
+        model.retention_proj.bias.zero_()
+        model.retention_proj.weight[:, 0] = 2.0
+        model.candidate_proj.weight.zero_()
+        model.candidate_proj.bias.zero_()
+
+    sequence_a = torch.zeros(1, 4, 8)
+    sequence_b = sequence_a.clone()
+    sequence_b[:, 1, 0] = 1.0
+    query = torch.tensor([[1.0, 0.0, 0.0]])
+
+    retention_a = model(sequence_a, query).diagnostics["retention"]
+    retention_b = model(sequence_b, query).diagnostics["retention"]
+
+    assert retention_a.shape == (1, 4, 36)
+    assert retention_b.shape == (1, 4, 36)
+    assert not torch.allclose(retention_a, retention_b)
+
+
+def test_transformer_query_is_an_explicit_final_causal_token():
+    model = TinyCausalTransformer(d_model=12, nhead=3, num_layers=1, ff_dim=24)
+    sequence, query = _example(batch=2, time=12)
+    output = model(sequence, query)
+
+    assert output.diagnostics["token_states"].shape == (2, 13, 12)
+    assert output.diagnostics["query_state"].shape == (2, 12)
+    assert torch.equal(
+        output.diagnostics["query_state"], output.diagnostics["token_states"][:, -1]
+    )
