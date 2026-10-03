@@ -7,6 +7,7 @@ from multiple_temporal_lenses.lenses import (
     LeakyLensBank,
     decays_from_timescales,
     from_band_coordinates,
+    impulse_kernel,
     to_coordinates,
 )
 
@@ -82,3 +83,32 @@ def test_invalid_timescale_and_shapes_are_rejected():
         bank.run(torch.zeros(3, 5))
     with pytest.raises(ValueError, match="state_dim"):
         bank.run(torch.zeros(3, 5, 4))
+
+
+def test_band_coordinates_are_fast_minus_slow_residuals_with_slowest_tail():
+    states = torch.tensor([[[10.0], [6.0], [2.0]]])
+    bands = to_coordinates(states, "band")
+
+    assert torch.equal(bands, torch.tensor([[[4.0], [4.0], [2.0]]]))
+    assert torch.equal(from_band_coordinates(bands), states)
+
+
+def test_impulse_kernel_matches_leaky_formula_and_exposes_signed_residual_bands():
+    decays = torch.tensor([0.5, 0.95, 0.995])
+    lags = [0, 2, 20, 200]
+    raw = impulse_kernel(decays, lags, mode="raw")
+    band = impulse_kernel(decays, lags, mode="band")
+
+    expected_raw = torch.stack(
+        [(1.0 - decays) * decays.pow(lag) for lag in lags], dim=0
+    )
+    assert torch.allclose(raw, expected_raw, atol=1e-7, rtol=0.0)
+
+    expected_band = torch.stack(
+        [raw[:, 0] - raw[:, 1], raw[:, 1] - raw[:, 2], raw[:, 2]], dim=1
+    )
+    assert torch.allclose(band, expected_band, atol=1e-7, rtol=0.0)
+
+    assert torch.all(raw[0] > raw[-1])
+    assert band[0, 0] > 0 and band[-1, 0] < 0
+    assert band[0, 1] > 0 and band[-1, 1] < 0

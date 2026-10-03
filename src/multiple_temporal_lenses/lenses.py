@@ -11,11 +11,6 @@ from torch import Tensor, nn
 
 
 def decays_from_timescales(timescales: Sequence[float]) -> Tensor:
-    """Convert non-negative time constants to leaky-state decay factors.
-
-    A zero time constant is treated as the tau->0 limit, rho=0. Positive
-    values use rho = exp(-1 / tau).
-    """
     if len(timescales) == 0:
         raise ValueError("timescales must not be empty")
     values = [float(tau) for tau in timescales]
@@ -26,8 +21,6 @@ def decays_from_timescales(timescales: Sequence[float]) -> Tensor:
 
 
 class LeakyLensBank(nn.Module):
-    """A fixed bank of leaky temporal states with heterogeneous timescales."""
-
     def __init__(self, state_dim: int, timescales: Sequence[float]) -> None:
         super().__init__()
         if state_dim <= 0:
@@ -41,14 +34,12 @@ class LeakyLensBank(nn.Module):
         return self.state_dim * self.num_lenses
 
     def run(self, encoded_sequence: Tensor) -> Tensor:
-        """Return final lens states for an encoded sequence shaped [B,T,D]."""
         if encoded_sequence.ndim != 3:
             raise ValueError("encoded_sequence must have shape [batch, time, state_dim]")
         if encoded_sequence.shape[-1] != self.state_dim:
             raise ValueError(
                 f"encoded_sequence state_dim {encoded_sequence.shape[-1]} does not match {self.state_dim}"
             )
-
         batch_size = encoded_sequence.shape[0]
         state = encoded_sequence.new_zeros(
             (batch_size, self.num_lenses, self.state_dim)
@@ -57,7 +48,6 @@ class LeakyLensBank(nn.Module):
             device=encoded_sequence.device, dtype=encoded_sequence.dtype
         ).view(1, self.num_lenses, 1)
         one_minus_rho = 1.0 - rho
-
         for step in range(encoded_sequence.shape[1]):
             event = encoded_sequence[:, step].unsqueeze(1)
             state = rho * state + one_minus_rho * event
@@ -67,7 +57,7 @@ class LeakyLensBank(nn.Module):
 def to_coordinates(
     states: Tensor, mode: Literal["raw", "band"] = "raw"
 ) -> Tensor:
-    """Expose lens states directly or as an invertible adjacent-difference basis."""
+    """Expose raw lowpasses or fast-minus-slower temporal residual coordinates."""
     if states.ndim < 2:
         raise ValueError("states must include a lens dimension")
     if mode == "raw":
@@ -76,14 +66,50 @@ def to_coordinates(
         raise ValueError("mode must be 'raw' or 'band'")
 
     bands = torch.empty_like(states)
-    bands[..., 0, :] = states[..., 0, :]
     if states.shape[-2] > 1:
-        bands[..., 1:, :] = states[..., 1:, :] - states[..., :-1, :]
+        bands[..., :-1, :] = states[..., :-1, :] - states[..., 1:, :]
+    bands[..., -1, :] = states[..., -1, :]
     return bands
 
 
 def from_band_coordinates(bands: Tensor) -> Tensor:
-    """Recover raw lens states from the adjacent-difference band basis."""
+    """Recover raw lowpasses from (fast-medium, ..., slowest) residuals."""
     if bands.ndim < 2:
         raise ValueError("bands must include a lens dimension")
-    return torch.cumsum(bands, dim=-2)
+    return torch.flip(
+        torch.cumsum(torch.flip(bands, dims=[-2]), dim=-2), dims=[-2]
+    )
+
+
+def impulse_kernel(
+    decays: Tensor, lags: Sequence[int], mode: Literal["raw", "band"] = "raw"
+) -> Tensor:
+    """Analytical impulse weights at selected lags for raw or residual coordinates.
+
+    Returns shape [num_lags, num_lenses]. For a raw leaky state, an event at
+    lag L has weight (1-rho)*rho**L. Residual coordinates use adjacent
+    fast-minus-slower differences with the slowest lowpass retained as tail.
+    """
+    rho = torch.as_tensor(decays, dtype=torch.float32)
+    if rho.ndim != 1 or rho.numel() == 0:
+        raise ValueError("decays must be a non-empty 1D tensor")
+    if torch.any((rho < 0.0) | (rho >= 1.0)):
+        raise ValueError("decays must satisfy 0 <= rho < 1")
+    lag_values = [int(lag) for lag in lags]
+    if any(lag < 0 for lag in lag_values):
+        raise ValueError("lags must be non-negative")
+
+    lag_tensor = torch.tensor(
+        lag_values, dtype=rho.dtype, device=rho.device
+    ).view(-1, 1)
+    raw = (1.0 - rho.view(1, -1)) * rho.view(1, -1).pow(lag_tensor)
+    if mode == "raw":
+        return raw
+    if mode != "band":
+        raise ValueError("mode must be 'raw' or 'band'")
+
+    bands = torch.empty_like(raw)
+    if raw.shape[1] > 1:
+        bands[:, :-1] = raw[:, :-1] - raw[:, 1:]
+    bands[:, -1] = raw[:, -1]
+    return bands
