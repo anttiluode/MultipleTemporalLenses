@@ -1,32 +1,63 @@
 # Core temporal-lens receipts
 
-Gate 0 and Gate 1 use the corrected temporal-residual amendment. Gate 1 is a 2×2 factorial over coordinate basis (`raw`, `temporal residual`) and reader (`query-gated softmax`, `query-conditioned concat`), plus a 36-scalar single-state GRU.
+This directory is the measurement ledger for the core non-oscillatory experiment. Numbers below are copied from the frozen JSON receipts; the JSON files remain authoritative.
 
-## Corrected Gate 1
+## Gate summary
 
-| model | development accuracy | held-out accuracy |
+| gate | outcome | narrow observation |
+|---|---|---|
+| Gate 0 — mechanics | analytical sanity check | raw leaky states are recent-biased; residual coordinates are invertible signed differences |
+| Gate 1 — query chooses timescale | `NO_CLEAR_PRIMARY_ADVANTAGE` | raw + concat is best held-out fixed-state lens reader at 0.5258 |
+| Gate 2 — same present, different history | `FAIL_HISTORY_DEPENDENCE` | large history-vs-shuffle gaps, best paired accuracy 0.5250 |
+| Gate 3 — later context bends meaning | `FAIL_REINTERPRETATION` | no compact reader produces the required probability revision |
+| Gate 4 — controls/stress | routing narrowed; explicit history wins exact-anchor stress | transformer reaches 1.0000 on `(2,20,200)` stress with sequence-growing memory |
+
+## Gate 1 — corrected factorial
+
+| model | development | held-out |
 |---|---:|---:|
 | single-state GRU | 0.4543 | 0.4488 |
 | raw + gated | 0.5035 | 0.4430 |
 | residual + gated | 0.3965 | 0.4211 |
-| raw + concat | 0.6063 | **0.5258** |
+| raw + concat | 0.6062 | **0.5258** |
 | residual + concat | **0.6594** | 0.5051 |
 
-The development result suggested a residual-coordinate advantage for the generic concat reader, but it did **not** survive held-out evaluation: residual concat lost to raw concat on all five held-out seeds. Residual gating also lost to raw gating on all five held-out seeds. Under the preregistered rule (higher mean plus at least 4/5 seed wins), Gate 1 is `NO_CLEAR_PRIMARY_ADVANTAGE` for residual coordinates or routing.
+The development residual-coordinate advantage did not survive frozen lag shift. Classification: `NO_CLEAR_PRIMARY_ADVANTAGE`.
 
-The strongest measured result at this gate is narrower: the query-conditioned concat reader is the best of the fixed multiscale readers on held-out data, with raw coordinates slightly ahead of residual coordinates. Query-gated routing is not supported by this benchmark.
+## Gate 2 — history intervention
 
-The freeze marker was committed before the corrected held-out run and no settings were changed after development. An abandoned pre-correction local execution had previously touched seed identities 3001–3005 under the superseded design; corrected-model settings were not tuned from those results, so this run is best described as the preregistered canonical held-out replication rather than claiming those seeds were never executed anywhere.
+| model | paired | shuffled | delta |
+|---|---:|---:|---:|
+| raw + concat | **0.5250** | 0.1207 | +0.4043 |
+| residual + concat | 0.5029 | 0.1193 | +0.3836 |
+| single-state GRU | 0.4500 | 0.1299 | +0.3201 |
+| residual + gated | 0.4213 | 0.1252 | +0.2961 |
 
-## Selective-state interpretation control
+All models fail the preregistered `>0.75` absolute paired-accuracy bar. The large shuffle deltas nevertheless show that history representations carry task-relevant information.
 
-The planned 36-scalar `SelectiveStateBaseline` was then trained with the same frozen optimizer settings, training seed `101`, validation seed `202`, and no hyperparameter tuning after Gate 1. It is a minimal input-selective diagonal recurrence and should be described as **Mamba-like**, not as Mamba itself.
+## Gate 3 — reinterpretation
 
-| model | development accuracy | held-out accuracy |
-|---|---:|---:|
-| raw + concat | 0.6063 | **0.5258** |
-| selective-state control | 0.3969 | 0.4211 |
+Primary residual-gated: final accuracy 0.4359; context-consistent probability shift +0.0018. Required: final accuracy `>0.80`, shift `>=0.25`.
 
-The selective-state control was lower than raw + concat by **0.1047 absolute accuracy** on held-out data and lost on all five held-out seeds. Under this specific benchmark and frozen implementation, generic input-dependent retention does **not** explain the raw multiscale-bank result.
+Best final accuracy is raw + concat at 0.4996; its probability shift is +0.0001. Gate 3 is a clear negative result.
 
-This does not establish an architecture-level advantage over Mamba or selective state-space models in general: only the repository's small diagonal selective recurrence has been tested so far. The surviving narrow observation is that an explicit fixed bank of heterogeneous temporal summaries plus a generic query-conditioned readout outperformed both the matched-state GRU and this minimal selective-state control on the tested lag-shift task.
+## Gate 4 — controls and long stress
+
+Short held-out lag shift: residual-gated 0.4211; minimal selective-state 0.4211; tiny transformer 0.4250. Routing-vs-selective classification: `SELECTIVE_STATE_EXPLAINS_RESULT`.
+
+Long exact-anchor `(2,20,200)` stress:
+
+| model | overall | lag 2 | lag 20 | lag 200 |
+|---|---:|---:|---:|---:|
+| tiny transformer | **1.0000** | 1.0000 | 1.0000 | 1.0000 |
+| residual + gated | 0.5461 | 1.0000 | 0.4042 | 0.2287 |
+| raw + concat | 0.4496 | 1.0000 | 0.2104 | 0.1317 |
+| selective-state | 0.4211 | 1.0000 | 0.1259 | 0.1304 |
+
+Transformer explicit-history proxy grows from 1,752 scalars (`T=72`) to 5,016 (`T=208`), 2.863×. It is not a fixed-state memory match.
+
+## Claim boundary
+
+Measured here: compact multiscale state contains usable history; generic query-conditioned concat is stronger than the tested softmax router on the short benchmark; the proposed routing mechanism fails its primary/reinterpretation gates; fixed-state compression degrades at older lags.
+
+Not established here: superiority over Mamba/modern SSMs; a cortical implementation; delayed-loop eigenmodes; oscillatory computation/PAC; consciousness claims.

@@ -57,6 +57,17 @@ def test_same_present_pairs_have_identical_present_and_query_but_different_histo
     assert torch.all((a.sequence[:, :-1] != b.sequence[:, :-1]).flatten(1).any(dim=1))
 
 
+def test_same_present_pairs_can_use_frozen_heldout_lags_without_changing_present_contract():
+    cfg, _, _ = canonical_short_config()
+    a, b = make_same_present_pairs(cfg, pair_count=24, seed=3001, split="heldout")
+
+    assert torch.equal(a.sequence[:, -1], b.sequence[:, -1])
+    assert torch.equal(a.query, b.query)
+    assert torch.all(a.target != b.target)
+    for scale, expected_lag in enumerate((4, 20, 64)):
+        assert set(a.metadata["lags"][:, scale].tolist()) == {expected_lag}
+
+
 def test_later_context_keeps_ambiguous_event_fixed_and_context_resolves_target():
     cfg, _, _ = canonical_short_config()
     batch = make_later_context_batch(cfg, batch_size=20, seed=91)

@@ -95,9 +95,10 @@ def make_same_present_pairs(
     config: BenchmarkConfig,
     pair_count: int,
     seed: int,
+    split: str = "dev",
 ) -> tuple[SequenceBatch, SequenceBatch]:
     """Return paired trials with identical present/query and different relevant history."""
-    a = make_query_timescale_batch(config, pair_count, seed, "dev")
+    a = make_query_timescale_batch(config, pair_count, seed, split)
     sequence_b = a.sequence.clone()
     target_b = a.target.clone()
     values_b = a.metadata["values"].clone()
